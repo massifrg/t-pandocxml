@@ -1,0 +1,9 @@
+\usemodule[t][pandocxml]
+
+\environment pandoc-xmlsetups
+
+% \xmlconvertpandocjsonfile{pandoc-testsuite.json}
+
+\starttext
+  \xmlprocesspandocjsonfile{test}{pandoc-testsuite.json}{xml:pandoc}
+\stoptext

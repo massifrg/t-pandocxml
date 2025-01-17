@@ -1,0 +1,21 @@
+%D \module
+%D   [     file=t-pandocxml,
+%D      version=2025-01-17,
+%D        title=pandocxml \CONTEXT\ User Module,
+%D     subtitle=Convert Pandoc JSON files to XML,
+%D       author=M. Farinella,
+%D         date=\currentdate,
+%D    copyright=M. Farinella,
+%D        email=massifrg@gmail.com,
+%D      license=Public Domain]
+
+\ctxloadluafile{t-pandocxml}{}
+
+\def\pandocXMLprocess#1#2%
+  {\xmlappenddocumentsetup{#1}{#2}
+   \begingroup
+   \edef\xmldocument{#2}%
+   \setcatcodetable\notcatcodes
+   \xmlsetup{#2}{#1}%
+   \xmlflush{#2}%
+   \endgroup}

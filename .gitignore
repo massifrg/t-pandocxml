@@ -1,0 +1,4 @@
+dist/
+test/*.pdf
+test/*.tuc
+test/*.log

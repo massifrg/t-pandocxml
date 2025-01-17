@@ -1,0 +1,72 @@
+\startxmlsetups xml:pandoc
+  \xmlsetsetup{#1}{*}{-} % suppress unknown tags
+  \xmlsetsetup{#1}{Pandoc|meta|blocks}{xml:pandoc:*}
+  \xmlsetsetup{#1}{{Para}}{xml:pandoc:Para}
+  \xmlsetsetup{#1}{{Plain}}{xml:pandoc:Plain}
+  \xmlsetsetup{#1}{Emph|Strong|Superscript|Subscript|Underline|Strikeout|SmallCaps}{xml:pandoc:*}
+  \xmlsetsetup{#1}{{Quoted[quote-type=DoubleQuote]}}{xml:pandoc:QuotedDouble}
+  \xmlsetsetup{#1}{{Quoted[quote-type=SingleQuote]}}{xml:pandoc:QuotedSingle}
+  \xmlsetsetup{#1}{document}{xml:document}
+\stopxmlsetups
+
+\xmlregisterdocumentsetup{test}{xml:pandoc}
+
+\startxmlsetups xml:pandoc:Pandoc
+  \xmlall{#1}{meta}
+  \xmlall{#1}{blocks}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:meta
+% TODO
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:blocks
+  \starttext
+  \xmlflush{#1}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Para
+  \dontleavehmode
+  \xmlflush{#1}
+  \par
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Plain
+  \dontleavehmode\xmlflush{#1}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Emph
+  \bgroup\em\xmlflush{#1}\egroup
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Strong
+  \bgroup\bf\xmlflush{#1}\egroup
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Superscript
+  \high{\xmlflush{#1}}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Subscript
+  \low{\xmlflush{#1}}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Underline
+  \underbar{\xmlflush{#1}}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Strikeout
+  \overstrike{\xmlflush{#1}}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:SmallCaps
+  \smallcaps{\xmlflush{#1}}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:QuotedDouble
+  \quotedblleft\xmlflush{#1}\quotedblright
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:QuotedSingle
+  \quoteleft\xmlflush{#1}\quoteright
+\stopxmlsetups
