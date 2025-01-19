@@ -1,12 +1,37 @@
+\startlua
+  require("pandoc-xmlsetups")
+\stoplua
+
+\definedescription
+  [description]
+  [headstyle=bold, style=normal, location=hanging, width=broad, margin=1cm, alternative=hanging]
+
+\defineparagraphs[CodeBlock]
+
 \startxmlsetups xml:pandoc
   \xmlsetsetup{#1}{*}{-} % suppress unknown tags
   \xmlsetsetup{#1}{Pandoc|meta|blocks}{xml:pandoc:*}
   \xmlsetsetup{#1}{{Para}}{xml:pandoc:Para}
+  \xmlsetsetup{#1}{{Div[custom-style] Para}}{xml:pandoc:Para:custom-style}
   \xmlsetsetup{#1}{{Plain}}{xml:pandoc:Plain}
+  \xmlsetsetup{#1}{{BulletList}}{xml:pandoc:BulletList}
+  \xmlsetsetup{#1}{{OrderedList}}{xml:pandoc:OrderedList}
+  \xmlsetsetup{#1}{{BulletList > item, OrderedList > item}}{xml:pandoc:ListItem}
+  \xmlsetsetup{#1}{{DefinitionList}}{+}
+  \xmlsetsetup{#1}{{DefinitionList > item}}{xml:pandoc:DefinitionListItem}
+  \xmlsetsetup{#1}{{DefinitionList term}}{+}
+  \xmlsetsetup{#1}{{DefinitionList def}}{+}
+  \xmlsetsetup{#1}{{CodeBlock}}{xml:pandoc:CodeBlock}
   \xmlsetsetup{#1}{Emph|Strong|Superscript|Subscript|Underline|Strikeout|SmallCaps}{xml:pandoc:*}
   \xmlsetsetup{#1}{{Quoted[quote-type=DoubleQuote]}}{xml:pandoc:QuotedDouble}
   \xmlsetsetup{#1}{{Quoted[quote-type=SingleQuote]}}{xml:pandoc:QuotedSingle}
-  \xmlsetsetup{#1}{document}{xml:document}
+  \xmlsetsetup{#1}{{Span}}{+}
+  \xmlsetsetup{#1}{{Span[custom-style]}}{xml:pandoc:Span:custom-style}
+  \xmlsetsetup{#1}{{Math[math-type=InlineMath]}}{xml:pandoc:Math:InlineMath}
+  \xmlsetsetup{#1}{{Math[math-type=DisplayMath]}}{xml:pandoc:Math:DisplayMath}
+  \xmlsetsetup{#1}{{RawBlock[format=context], RawInline[format=context]}}{xml:pandoc:Raw:context}
+  \xmlsetsetup{#1}{{Code}}{xml:pandoc:Code}
+  \xmlsetsetup{#1}{{Link}}{xml:pandoc:Link}
 \stopxmlsetups
 
 \xmlregisterdocumentsetup{test}{xml:pandoc}
@@ -29,6 +54,18 @@
   \dontleavehmode
   \xmlflush{#1}
   \par
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Div
+  \xmlflush{#1}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Para:custom-style
+  \dontleavehmode
+  \start[\xmlatt{#1}{custom-style}]
+  \xmlflush{#1}
+  \par
+  \stop
 \stopxmlsetups
 
 \startxmlsetups xml:pandoc:Plain
@@ -69,4 +106,57 @@
 
 \startxmlsetups xml:pandoc:QuotedSingle
   \quoteleft\xmlflush{#1}\quoteright
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Span:custom-style
+  \start[\xmlatt{#1}{custom-style}]\xmlflush{#1}\stop
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:ListItem
+  \startitem
+  \xmlflush{#1}
+  \stopitem
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:BulletList
+  \startitemize
+  \xmlflush{#1}
+  \stopitemize
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:OrderedList
+  \xmlfunction{#1}{startOrderedList}
+  \xmlflush{#1}
+  \xmlfunction{#1}{stopOrderedList}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:DefinitionListItem
+  \startdescription{\xmlfirst{#1}{{term}}}
+    \xmlall{#1}{{def}}
+  \stopdescription
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Math:InlineMath
+  \m{\xmlcontext{#1}{.}}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Math:DisplayMath
+  % \startformula \xmlcontext{#1} \stopformula
+  \m{\displaystyle{\xmlcontext{#1}{.}}}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Raw:context
+  \xmlcontext{#1}{.}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:CodeBlock
+  \xmlprettyprint{#1}{\xmlatt{#1}{language}}
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Code
+  \startxmlinlineverbatim\tt\xmlflush{#1}\stopxmlinlineverbatim
+\stopxmlsetups
+
+\startxmlsetups xml:pandoc:Link
+  \startxmlinlineverbatim\tt\xmlflush{#1}\stopxmlinlineverbatim
 \stopxmlsetups
