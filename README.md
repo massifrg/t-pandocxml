@@ -77,20 +77,7 @@ mtxrun --script pandocjsontoxml.lua mydoc.json
 
 you'll see the XML in the standard output.
 
-## Typeset Pandoc JSON files with ConTeXt XML setups
-
-(TODO; for now you can look at `.tex` files in the `test` directory).
-
-Examples:
-
-```sh
-context test1
-context pandoc-testsuite
-```
-
-Both import some simple xmlsetups from `pandoc-xmlsetups.tex`.
-
-### How Pandoc items are encoded in XML
+## How Pandoc items are encoded in XML
 
 Most of Pandoc items are JSON-encoded with a `t` (type) and a `c` (content) fields.
 
