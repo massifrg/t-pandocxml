@@ -13,20 +13,61 @@ This is how it works:
   to associate typesetting templates (xmlsetups) to XML elements;
   the association is made through XPath-like (lpath) or CSS selectors.
 
+## Installation
+
+In a GNU/Linux machine, you can create a `zip` file of the module
+with the script `create_module_zip.sh` in the `devhelpers` directory:
+
+```sh
+cd devhelpers
+./create_module_zip.sh
+```
+
+You can install it with:
+
+```sh
+mtxrun --script install-modules --install --module dist/t-pandocxml-????.??.??.zip
+```
+
+An alternative is unzipping it in the `~/texmf` directory, but it should increase
+the startup time of ConTeXt, because that directory is scanned everytime ConTeXt is run.
+
+## Usage examples
+
+In the `test` directory there are some examples.
+
+Once you installed the module, you can do this:
+
+```sh
+cd test
+context test1
+```
+
+These are the contents of `test1.tex`:
+
+```tex
+% load the module to process pandoc JSON as XML
+\usemodule[t][pandocxml]
+
+% load the file that defines xmlsetups for Pandoc (xml:pandoc)
+\environment pandoc-xmlsetups
+
+% process test1.json with xml:pandoc setups
+\starttext
+  \xmlprocesspandocjsonfile{test}{test1.json}{xml:pandoc}
+\stoptext
+```
+
 ## Convert Pandoc JSON files to XML
 
-The first, simple, step you can make is to convert a Pandoc JSON file
-to its XML equivalent.
-
-Just type (you need ConTeXt to be installed on your system):
+You can convert a Pandoc JSON file to its XML equivalent.
+It's a good way to see how this module converts Pandoc AST items into XML elements.
 
 ```sh
 mtxrun --script pandocjsontoxml.lua mydoc.json mydoc.xml
 ```
 
 where `mydoc.json` is your JSON document, and `mydoc.xml` is its translation to XML.
-
-That way you can also check how a Pandoc document is translated into XML.
 
 If you specify only the source file,
 
@@ -114,21 +155,24 @@ Because the standard Pandoc conversion to ConTeXt format can lose much of
 the information that can be carried by a Pandoc document.
 
 You may use filters to retain some of that information and use it
-by injecting `RawBlock` or `RawInline` elements of "context" format.
+by injecting `RawBlock` or `RawInline` elements of "context" format,
+but passing all the items of the Pandoc AST to ConTeXt is easier.
+This way, you can also extend the textual elements that Pandoc can handle.
 
 In particular, I'm using some conventions to provide indices and different
 kinds of notes (not only footnotes), that are not supported by Pandoc,
 and its `Writer` of the ConTeXt format.
 
-You can also try to parse the native or JSON Pandoc formats directly in
-ConTeXt; it's possible, because ConTeXt has Lua libraries to parse JSON
+Another way, instead of converting to XML, is parsing the native
+or JSON Pandoc formats directly in ConTeXt;
+it's possible, because ConTeXt has Lua libraries to parse JSON
 or even the native format (through LPEGs).
 But you must transform the parsed information into ConTeXt macro calls.
 
 I already did some typesetting XML with ConTeXt, and Pandoc internal format
 can be converted to XML in quite a natural way (see above), so I prefer 
-transforming the JSON files into XML, and then use ConTeXt's macros
-designed for XML typesetting.
+transforming the JSON files into XML, and have all the tools ConTeXt
+provides for XML typesetting.
 
 Moreover, the conversion from JSON to XML can be done on the fly in
 memory by ConTeXt.
@@ -153,7 +197,7 @@ pass through Pandoc, and it is storable as a file in two formats:
 The internal model is tree-like, and a transformation of it into XML
 is pretty straightforward (see above).
 
-## Further use in pundok-editor
+## Future use in pundok-editor
 
 Synctex information can be injected in the lua table of the
 XML representation of a Pandoc JSON document;

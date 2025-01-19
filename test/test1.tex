@@ -1,9 +1,10 @@
+% load the module to process pandoc JSON as XML
 \usemodule[t][pandocxml]
 
+% load the file that defines xmlsetups for Pandoc (xml:pandoc)
 \environment pandoc-xmlsetups
 
-% \xmlconvertpandocjsonfile{test1.json}
-
+% process test1.json with xml:pandoc setups
 \starttext
   \xmlprocesspandocjsonfile{test}{test1.json}{xml:pandoc}
 \stoptext
