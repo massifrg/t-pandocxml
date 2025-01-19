@@ -27,8 +27,19 @@ local lxml = lxml
 local xml = xml
 local interfaces = interfaces
 local environment = environment
+local is_mtxrun_script = interfaces and true or false
 
 local log_report = logs.reporter('json2xml')
+local log
+if is_mtxrun_script then
+  log = function(msg)
+    log_report(msg)
+  end
+else
+  log = function(msg)
+    io.stderr:write(msg .. "\n")
+  end
+end
 
 local DEFAULT_API_VERSION = { 1, 23 }
 
@@ -95,7 +106,7 @@ end
 local function enterSubDocument(state, filename)
   table_insert(state.filenames, filename)
   table_insert(state.counters, 1)
-  log_report('Entering subdocument "' .. filename .. '", depth ' .. #state.filenames)
+  log('Entering subdocument "' .. filename .. '", depth ' .. #state.filenames)
   return state
 end
 
@@ -103,7 +114,7 @@ end
 ---@param state PandocJsonParseState
 ---@return PandocJsonParseState
 local function exitSubDocument(state)
-  log_report('Exiting subdocument "' .. state.filenames[#state.filenames] .. '", depth ' .. #state.filenames)
+  log('Exiting subdocument "' .. state.filenames[#state.filenames] .. '", depth ' .. #state.filenames)
   table_remove(state.filenames, #state.filenames)
   table_remove(state.counters, #state.counters)
   return state
@@ -245,7 +256,7 @@ metaValueToXml = function(value, state, index)
   elseif t == 'MetaMap' then
     children = metaMapEntriesToXml(c, state)
   else
-    log_report("MetaValue \"" .. t .. '" unknown')
+    log("MetaValue \"" .. t .. '" unknown')
     return nil
   end
   setXmlChildren(element, children, at)
@@ -334,7 +345,7 @@ inlineToXml = function(inline, state, index)
   elseif t == 'Note' then
     children = blocksToXml(c, state)
   else
-    log_report("Inline \"" .. t .. '" unknown')
+    log("Inline \"" .. t .. '" unknown')
     return nil
   end
   setXmlChildren(element, children, at)
@@ -367,7 +378,7 @@ inlinesToXml = function(inlines, state, start)
         index = index + 1
       end
     else
-      log_report("can't decode Inline \"" .. inlines[i].t .. '"')
+      log("can't decode Inline \"" .. inlines[i].t .. '"')
     end
   end
   if #strings > 0 then
@@ -651,7 +662,7 @@ blockToXml = function(block, state, index)
       state = exitSubDocument(state)
     end
   else
-    log_report("Block \"" .. t .. '" unknown')
+    log("Block \"" .. t .. '" unknown')
     return nil
   end
   return setXmlChildren(element, children, at)
@@ -681,7 +692,7 @@ blocksToXml = function(blocks, state, start, separator)
         index = index + 1
       end
     else
-      log_report("can't decode Block \"" .. blocks[i].t .. '"')
+      log("can't decode Block \"" .. blocks[i].t .. '"')
     end
   end
   return elems
@@ -732,7 +743,7 @@ local function loadPandocJsonFileAsXml(filename, synctex)
     root.cl = 1
     root.dt = { pandocElement }
   else
-    log_report('file "' .. filename .. '" not loaded')
+    log('file "' .. filename .. '" not loaded')
   end
   return root
 end
@@ -785,7 +796,7 @@ local function convertPandocJsonFileToXmlFile(jsonfilename, xmlfilename)
   if not outfilename and string_match(jsonfilename, "[.]json$") then
     outfilename = string_gsub(jsonfilename, "[.]json$", ".xml")
   end
-  log_report('converting "' .. jsonfilename .. '" to XML as "' .. outfilename .. '"')
+  log('converting "' .. jsonfilename .. '" to XML as "' .. outfilename .. '"')
   convertPandocJsonFile(jsonfilename, xmlfilename)
 end
 
