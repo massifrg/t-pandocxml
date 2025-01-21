@@ -64,6 +64,8 @@ local TAG_TABLE_ROW = 'Row'
 local TAG_TABLE_HEADER_CELL = 'Cell'
 local TAG_TABLE_CELL = 'Cell'
 local ATTR_API_VERSION = 'api-version'
+local ATTR_TABLE_BODY_HEAD_ROWS = 'head-rows'
+local ATTR_TABLE_BODY_HEAD_COLS = 'head-columns'
 local ATTR_TABLE_CELL_ALIGN = 'align'
 local ATTR_TABLE_CELL_COLSPAN = 'colspan'
 local ATTR_TABLE_CELL_ROWSPAN = 'rowspan'
@@ -608,7 +610,16 @@ blockToXml = function(block, state, index)
       end
       if #body_rows > 0 then table_insert(body_rows, '\n') end
       table_insert(table_items, '\n')
-      setXmlChildren(table_body, reIndexElements(body_rows), atFromAttr(body[1]))
+      local body_attributes = atFromAttr(body[1])
+      local body_head_rows = #body[3]
+      local body_head_cols = body[2]
+      if body_head_rows > 0 then
+        body_attributes[ATTR_TABLE_BODY_HEAD_ROWS] = body_head_rows
+      end
+      if body_head_cols > 0 then
+        body_attributes[ATTR_TABLE_BODY_HEAD_COLS] = body_head_cols
+      end
+      setXmlChildren(table_body, reIndexElements(body_rows), body_attributes)
       table_insert(table_items, table_body)
     end
     -- table foot
