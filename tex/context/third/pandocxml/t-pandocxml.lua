@@ -69,6 +69,7 @@ local TAG_TABLE_BODY_BODY = "body"
 local TAG_TABLE_FOOT = "TableFoot"
 local TAG_TABLE_COLSPECS = 'colspecs'
 local TAG_TABLE_COLSPEC = 'ColSpec'
+local ATTR_COL_WIDTH = 'col-width'
 local COL_WIDTH_DEFAULT_VALUE = '0' -- was "ColWidthDefault"
 local TAG_TABLE_HEADER_ROW = 'Row'
 local TAG_TABLE_ROW = 'Row'
@@ -607,7 +608,7 @@ blockToXml = function(block, state, index)
       local colspec = createXmlElement(state, TAG_TABLE_COLSPEC, i)
       setXmlChildren(colspec, {}, {
         alignment = pandoc_colspecs[i][1].t,
-        ['col-width'] = tostring(colwidth)
+        [ATTR_COL_WIDTH] = tostring(colwidth)
       })
       table_insert(colspecs, colspec)
     end
