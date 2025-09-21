@@ -316,18 +316,25 @@ inlineToXml = function(inline, state, index)
     at = { ["quote-type"] = c[1].t }
     children = inlinesToXml(c[2], state)
   elseif t == 'Cite' then
-    local cite_elements = {}
+    local citation_elements = {}
     local pandoc_citations = c[1]
     for i = 1, #pandoc_citations do
       local pandoc_citation = pandoc_citations[i]
       local citation = createXmlElement(state, TAG_CITATION, i)
-      local prefix = createXmlElement(state, TAG_CITATION_PREFIX, 1)
-      setXmlChildren(prefix, inlinesToXml(pandoc_citation.citationPrefix, state))
-      local suffix = createXmlElement(state, TAG_CITATION_SUFFIX, 2)
-      setXmlChildren(suffix, inlinesToXml(pandoc_citation.citationSuffix, state))
+      local citation_contents = {}
+      if #pandoc_citation.citationPrefix > 0 then
+        local prefix = createXmlElement(state, TAG_CITATION_PREFIX, 1)
+        setXmlChildren(prefix, inlinesToXml(pandoc_citation.citationPrefix, state))
+        table_insert(citation_contents, prefix)
+      end
+      if #pandoc_citation.citationSuffix > 0 then
+        local suffix = createXmlElement(state, TAG_CITATION_SUFFIX, 2)
+        setXmlChildren(suffix, inlinesToXml(pandoc_citation.citationSuffix, state))
+        table_insert(citation_contents, suffix)
+      end
       setXmlChildren(
         citation,
-        { prefix, suffix },
+        citation_contents,
         {
           [ATTR_CITATION_ID] = pandoc_citation.citationId,
           [ATTR_CITATION_MODE] = pandoc_citation.citationMode.t,
@@ -335,13 +342,16 @@ inlineToXml = function(inline, state, index)
           [ATTR_CITATION_HASH] = tostring(pandoc_citation.citationHash),
         }
       )
-      table_insert(cite_elements, citation)
+      table_insert(citation_elements, citation)
+      table_insert(citation_elements, NEWLINE)
     end
-    local contents = inlinesToXml(c[2], state, #pandoc_citations + 1)
-    for i = 1, #contents do
-      table_insert(cite_elements, contents[i])
+    children = inlinesToXml(c[2], state, 2)
+    if #citation_elements >0 then
+      local citations = createXmlElement(state, TAG_CITATIONS,1)
+      table_insert(citation_elements, 1, NEWLINE)
+      setXmlChildren(citations, citation_elements)
+      table_insert(children, 1, citations)
     end
-    children = cite_elements
   elseif t == 'Code' then
     at = atFromAttr(c[1])
     children = { c[2] }
