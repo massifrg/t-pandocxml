@@ -13,6 +13,38 @@ This is how it works:
   to associate typesetting templates (xmlsetups) to XML elements;
   the association is made through XPath-like (lpath) or CSS selectors.
 
+## xml format in Pandoc
+
+Since version 3.8 (released on September 6th, 2025), Pandoc provides
+an XML format that is equal to the one produced by this module.
+
+There were some small differences, but the version of September 21st, 2025,
+fixes them:
+
+- the `align` attribute becomes `alignment`
+
+- the `colspan` attribute becomes `col-span`
+
+- the `rowspan` attribute becomes `row-span`
+
+- the default value of `col-width` attribute is "0" instead of "ColWidthDefault"
+
+- the `head-columns` attribute of `<TableBody>` becomes `row-head-columns`
+
+- the `head-rows` attribute of `<TableBody>` is suppressed, because now
+  the children of that element are `<header>` and `<body>`, that contain
+  respectively the `<Row>` elements of the body's header and body
+
+- the `<Citation>` elements inside a `<Cite>` element are now embedded
+  in a `<citations>` element
+
+There are still some differences between the XML output of Pandoc and
+the output of this module:
+
+- this module does not add the `<?xml version='1.0' ?>` line at the top
+
+- in space before the "/>" closing empty elements
+
 ## Installation
 
 In a GNU/Linux machine, you can create a `zip` file of the module
@@ -64,7 +96,7 @@ You can convert a Pandoc JSON file to its XML equivalent.
 It's a good way to see how this module converts Pandoc AST items into XML elements.
 
 ```sh
-mtxrun --script pandocjsontoxml.lua mydoc.json mydoc.xml
+mtxrun --script pandocjsontoxml mydoc.json mydoc.xml
 ```
 
 where `mydoc.json` is your JSON document, and `mydoc.xml` is its translation to XML.
@@ -72,7 +104,7 @@ where `mydoc.json` is your JSON document, and `mydoc.xml` is its translation to 
 If you specify only the source file,
 
 ```sh
-mtxrun --script pandocjsontoxml.lua mydoc.json
+mtxrun --script pandocjsontoxml mydoc.json
 ```
 
 you'll see the XML in the standard output.
@@ -107,7 +139,7 @@ For elements, I kept the capitalization of Pandoc types (`meta` and `blocks` are
 but they are not Pandoc items).
 
 Lowercase tags are used also for items that don't have an explicit name in Pandoc, like list items (`<item>`), the lines of a `LineBlock` (`<line>`), or the terms (`<term>`) and definitions (`<def>`) of `DefinitionList`.
-The citations in a `<Cite>` inline element become `<Citation>` elements.
+The citations in a `<Cite>` inline element become `<Citation>` elements inside a single `<citations>` element.
 
 For attributes, I preferred a lowercase version (kebab-case when attributes are multi-word).
 So,
