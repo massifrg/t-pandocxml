@@ -1,6 +1,7 @@
+---@diagnostic disable-next-line: lowercase-global
 if not modules then modules = {} end
 modules['t-pandocxml'] = {
-  version   = "2025.01.17",
+  version   = "2025.09.21",
   comment   = "Conversion of Pandoc JSON files to XML",
   author    = "M. Farinella",
   copyright = "M. Farinella",
@@ -8,6 +9,7 @@ modules['t-pandocxml'] = {
   license   = "Public Domain"
 }
 
+---@diagnostic disable-next-line: lowercase-global
 thirddata = thirddata or {}
 
 -- load types' annotations
@@ -47,6 +49,8 @@ local INCLUDE_SRC_ATTR = "include-src"
 local INCLUDE_DOC_CLASS = "include-doc"
 local INCLUDED_CLASS = "included"
 
+local NEWLINE = "\n"
+
 local TAG_PANDOC = 'Pandoc'
 local TAG_META = 'meta'
 local TAG_META_MAP_ENTRY = 'entry'
@@ -56,19 +60,26 @@ local TAG_LIST_ITEM = 'item'
 local TAG_DEF_LIST_TERM = 'term'
 local TAG_DEF_LIST_DEF = 'def'
 local TAG_LINEBLOCK_LINE = 'line'
+local TAG_CAPTION = 'Caption'
 local TAG_CAPTION_SHORT = 'ShortCaption'
+local TAG_TABLE_HEAD = "TableHead"
+local TAG_TABLE_BODY = "TableBody"
+local TAG_TABLE_BODY_HEADER = "header"
+local TAG_TABLE_BODY_BODY = "body"
+local TAG_TABLE_FOOT = "TableFoot"
 local TAG_TABLE_COLSPECS = 'colspecs'
 local TAG_TABLE_COLSPEC = 'ColSpec'
+local COL_WIDTH_DEFAULT_VALUE = '0' -- was "ColWidthDefault"
 local TAG_TABLE_HEADER_ROW = 'Row'
 local TAG_TABLE_ROW = 'Row'
 local TAG_TABLE_HEADER_CELL = 'Cell'
 local TAG_TABLE_CELL = 'Cell'
 local ATTR_API_VERSION = 'api-version'
-local ATTR_TABLE_BODY_HEAD_ROWS = 'head-rows'
-local ATTR_TABLE_BODY_HEAD_COLS = 'head-columns'
-local ATTR_TABLE_CELL_ALIGN = 'align'
-local ATTR_TABLE_CELL_COLSPAN = 'colspan'
-local ATTR_TABLE_CELL_ROWSPAN = 'rowspan'
+-- local ATTR_TABLE_BODY_HEAD_ROWS = 'head-rows'
+local ATTR_TABLE_BODY_HEAD_COLS = 'row-head-columns' -- was "head-columns"
+local ATTR_TABLE_CELL_ALIGN = 'alignment' -- was "align"
+local ATTR_TABLE_CELL_COLSPAN = 'col-span' -- was "colspan"
+local ATTR_TABLE_CELL_ROWSPAN = 'row-span' -- was "rowspan"
 local TAG_CITATION = 'Citation'
 local TAG_CITATIONS = 'citations'
 local ATTR_CITATION_ID = 'id'
@@ -206,10 +217,15 @@ local inlinesToXml = function(inlines, state, start) return {} end
 local blockToXml = function(block, state, index) end
 local blocksToXml = function(blocks, state, start, separator) return {} end
 
+---Convert a MetaMap into XML.
+---@param map table<string,PandocJsonItem>
+---@param state PandocJsonParseState
+---@param separator? string Text separating entries (usually a newline)
+---@return CtxXmlContent[]
 local function metaMapEntriesToXml(map, state, separator)
-  local sep = separator or "\n"
+  local sep = separator or NEWLINE
   local index = 1
-  local entries = {}
+  local entries = {} ---@type CtxXmlContent[]
   for key, value in sortedpairs(map) do
     local element = createXmlElement(state, TAG_META_MAP_ENTRY, index + 1)
     local child = metaValueToXml(value, state, 1)
@@ -230,6 +246,11 @@ local function metaMapEntriesToXml(map, state, separator)
   return entries
 end
 
+---Convert a single MetaValue into XML.
+---@param value PandocJsonItem
+---@param state PandocJsonParseState
+---@param index integer
+---@return CtxXmlElement|nil
 metaValueToXml = function(value, state, index)
   local t, c = value.t, value.c
   local element = createXmlElement(state, t, index)
@@ -250,11 +271,11 @@ metaValueToXml = function(value, state, index)
   elseif t == 'MetaList' then
     local lindex = 1
     for i = 1, #c do
-      table_insert(children, "\n")
+      table_insert(children, NEWLINE)
       table_insert(children, metaValueToXml(c[i], state, lindex))
       lindex = lindex + 2
     end
-    table_insert(children, "\n")
+    table_insert(children, NEWLINE)
   elseif t == 'MetaMap' then
     children = metaMapEntriesToXml(c, state)
   else
@@ -392,12 +413,12 @@ end
 local function createListItems(state, pandoc_c)
   local items = {}
   for i = 1, #pandoc_c do
-    table_insert(items, '\n')
+    table_insert(items, NEWLINE)
     local item = createXmlElement(state, TAG_LIST_ITEM, i)
     setXmlChildren(item, blocksToXml(pandoc_c[i], state))
     table_insert(items, item)
   end
-  table_insert(items, '\n')
+  table_insert(items, NEWLINE)
   return items
 end
 
@@ -417,13 +438,13 @@ local function createCaption(state, short, long)
   if short_caption then
     start = 2
   end
-  local caption = createXmlElement(state, 'Caption', 1)
+  local caption = createXmlElement(state, TAG_CAPTION, 1)
   local caption_blocks = blocksToXml(long, state, start) or {}
   if short_caption then
     table_insert(caption_blocks or {}, 1, short_caption)
   end
   if #caption_blocks > 0 then
-    table_insert(caption_blocks, 1, '\n')
+    table_insert(caption_blocks, 1, NEWLINE)
   end
   setXmlChildren(caption, reIndexElements(caption_blocks))
   return caption
@@ -451,14 +472,20 @@ local function createRow(state, pandoc_row, index, is_header, header_columns)
     local pandoc_cell = pandoc_cells[i]
     local cell_at = atFromAttr(pandoc_cell[1])
     cell_at[ATTR_TABLE_CELL_ALIGN] = pandoc_cell[2].t
-    cell_at[ATTR_TABLE_CELL_ROWSPAN] = tostring(pandoc_cell[3])
-    cell_at[ATTR_TABLE_CELL_COLSPAN] = tostring(pandoc_cell[4])
+    local rowspan = pandoc_cell[3]
+    if rowspan > 1 then
+      cell_at[ATTR_TABLE_CELL_ROWSPAN] = tostring(rowspan)
+    end
+    local colspan = pandoc_cell[4]
+    if colspan > 1 then
+      cell_at[ATTR_TABLE_CELL_COLSPAN] = tostring(colspan)
+    end
     setXmlChildren(cell, blocksToXml(pandoc_cell[5], state), cell_at)
-    table_insert(cells, '\n')
+    table_insert(cells, NEWLINE)
     table_insert(cells, cell)
   end
   if #cells > 0 then
-    table_insert(cells, '\n')
+    table_insert(cells, NEWLINE)
   end
   setXmlChildren(row, reIndexElements(cells), atFromAttr(pandoc_row[1]))
   return row
@@ -492,11 +519,11 @@ blockToXml = function(block, state, index)
       state = incrementLine(state)
       local line = createXmlElement(state, TAG_LINEBLOCK_LINE, i)
       setXmlChildren(line, inlinesToXml(c[i], state))
-      table_insert(lines, '\n')
+      table_insert(lines, NEWLINE)
       table_insert(lines, line)
     end
     if #lines > 0 then
-      table_insert(lines, '\n')
+      table_insert(lines, NEWLINE)
     end
     children = reIndexElements(lines)
   elseif t == 'CodeBlock' then
@@ -524,22 +551,22 @@ blockToXml = function(block, state, index)
       local term = createXmlElement(state, TAG_DEF_LIST_TERM, 1)
       setXmlChildren(term, inlinesToXml(c[i][1], state))
       local item_children = {}
-      table_insert(item_children, '\n')
+      table_insert(item_children, NEWLINE)
       table_insert(item_children, term)
       local pandoc_defs = c[i][2]
       for j = 1, #pandoc_defs do
         local def = createXmlElement(state, TAG_DEF_LIST_DEF, j + 1)
         setXmlChildren(def, blocksToXml(pandoc_defs[j], state))
-        table_insert(item_children, '\n')
+        table_insert(item_children, NEWLINE)
         table_insert(item_children, def)
       end
-      table_insert(item_children, '\n')
+      table_insert(item_children, NEWLINE)
       setXmlChildren(item, reIndexElements(item_children))
-      table_insert(items, '\n')
+      table_insert(items, NEWLINE)
       table_insert(items, item)
     end
     if #items > 0 then
-      table_insert(items, '\n')
+      table_insert(items, NEWLINE)
     end
     children = reIndexElements(items)
   elseif t == 'HorizontalRule' then
@@ -551,10 +578,10 @@ blockToXml = function(block, state, index)
     at = atFromAttr(c[1])
     -- table caption
     local caption = createCaption(state, c[2][1], c[2][2])
-    table_insert(table_items, '\n')
+    table_insert(table_items, NEWLINE)
     table_insert(table_items, caption)
     -- table colspecs
-    table_insert(table_items, '\n')
+    table_insert(table_items, NEWLINE)
     table_items_index = table_items_index + 1
     local colspecs_elem = createXmlElement(state, TAG_TABLE_COLSPECS, table_items_index)
     local pandoc_colspecs = c[3]
@@ -563,8 +590,10 @@ blockToXml = function(block, state, index)
       local colwidth = pandoc_colspecs[i][2].t
       if colwidth ~= 'ColWidthDefault' then
         colwidth = pandoc_colspecs[i][2].c
+      else
+        colwidth = COL_WIDTH_DEFAULT_VALUE
       end
-      table_insert(colspecs, '\n')
+      table_insert(colspecs, NEWLINE)
       local colspec = createXmlElement(state, TAG_TABLE_COLSPEC, i)
       setXmlChildren(colspec, {}, {
         alignment = pandoc_colspecs[i][1].t,
@@ -573,71 +602,79 @@ blockToXml = function(block, state, index)
       table_insert(colspecs, colspec)
     end
     if #colspecs > 0 then
-      table_insert(colspecs, '\n')
+      table_insert(colspecs, NEWLINE)
     end
     setXmlChildren(colspecs_elem, reIndexElements(colspecs))
     table_insert(table_items, colspecs_elem)
     -- table head
-    table_insert(table_items, '\n')
+    table_insert(table_items, NEWLINE)
     table_items_index = table_items_index + 1
-    local table_head = createXmlElement(state, 'TableHead', table_items_index)
+    local table_head = createXmlElement(state, TAG_TABLE_HEAD, table_items_index)
     local head = c[4]
     local head_rows = {}
-    local pandoc_rows = head[2]
-    for i = 1, #pandoc_rows do
-      table_insert(head_rows, '\n')
-      table_insert(head_rows, createRow(state, pandoc_rows[i], i, true))
+    local pandoc_head_rows = head[2]
+    for i = 1, #pandoc_head_rows do
+      table_insert(head_rows, NEWLINE)
+      table_insert(head_rows, createRow(state, pandoc_head_rows[i], i, true))
     end
-    if #head_rows > 0 then table_insert(head_rows, '\n') end
+    if #head_rows > 0 then table_insert(head_rows, NEWLINE) end
     setXmlChildren(table_head, reIndexElements(head_rows), atFromAttr(head[1]))
     table_insert(table_items, table_head)
     -- table bodies
     local bodies = c[5]
     for b = 1, #bodies do
-      local table_body = createXmlElement(state, 'TableBody', table_items_index)
+      table_insert(table_items, NEWLINE)
+      local table_body = createXmlElement(state, TAG_TABLE_BODY, table_items_index)
       local body = bodies[b]
       table_items_index = table_items_index + 1
-      local body_rows = {}
-      pandoc_rows = body[3]
-      for i = 1, #pandoc_rows do
-        table_insert(body_rows, '\n')
-        table_insert(body_rows, createRow(state, pandoc_rows[i], i, true, body[2]))
+      local body_hrows = {}
+      local body_brows = {}
+      local pandoc_bheader_rows = body[3]
+      for i = 1, #pandoc_bheader_rows do
+        table_insert(body_hrows, NEWLINE)
+        table_insert(body_hrows, createRow(state, pandoc_bheader_rows[i], i, true, body[2]))
       end
-      pandoc_rows = body[4]
-      for i = 1, #pandoc_rows do
-        table_insert(body_rows, '\n')
-        table_insert(body_rows, createRow(state, pandoc_rows[i], i, false, body[2]))
+      if #body_hrows > 0 then
+        table_insert(body_hrows, NEWLINE)
       end
-      if #body_rows > 0 then table_insert(body_rows, '\n') end
-      table_insert(table_items, '\n')
+      local pandoc_bbody_rows = body[4]
+      for i = 1, #pandoc_bbody_rows do
+        table_insert(body_brows, NEWLINE)
+        table_insert(body_brows, createRow(state, pandoc_bbody_rows[i], i, false, body[2]))
+      end
+      if #body_brows > 0 then
+        table_insert(body_brows, NEWLINE)
+      end
+      local body_header = createXmlElement(state, TAG_TABLE_BODY_HEADER, 1)
+      setXmlChildren(body_header, reIndexElements(body_hrows))
+      local body_body = createXmlElement(state, TAG_TABLE_BODY_BODY, 2)
+      setXmlChildren(body_body, reIndexElements(body_brows))
+      -- table_insert(table_items, NEWLINE)
       local body_attributes = atFromAttr(body[1])
-      local body_head_rows = #body[3]
       local body_head_cols = body[2]
-      if body_head_rows > 0 then
-        body_attributes[ATTR_TABLE_BODY_HEAD_ROWS] = body_head_rows
-      end
       if body_head_cols > 0 then
         body_attributes[ATTR_TABLE_BODY_HEAD_COLS] = body_head_cols
       end
-      setXmlChildren(table_body, reIndexElements(body_rows), body_attributes)
+      setXmlChildren(table_body,
+        reIndexElements({ NEWLINE, body_header, NEWLINE, body_body, NEWLINE }),
+        body_attributes)
       table_insert(table_items, table_body)
     end
     -- table foot
-    table_insert(table_items, '\n')
+    table_insert(table_items, NEWLINE)
     table_items_index = table_items_index + 1
-    local table_foot = createXmlElement(state, 'TableFoot', table_items_index)
+    local table_foot = createXmlElement(state, TAG_TABLE_FOOT, table_items_index)
     local foot = c[6]
     local foot_rows = {}
-    pandoc_rows = foot[2]
-    for i = 1, #pandoc_rows do
-      table_insert(foot_rows, '\n')
-      table_insert(foot_rows, createRow(state, pandoc_rows[i], i, true))
+    local pandoc_foot_rows = foot[2]
+    for i = 1, #pandoc_foot_rows do
+      table_insert(foot_rows, NEWLINE)
+      table_insert(foot_rows, createRow(state, pandoc_foot_rows[i], i, true))
     end
-    if #foot_rows > 0 then table_insert(foot_rows, '\n') end
+    if #foot_rows > 0 then table_insert(foot_rows, NEWLINE) end
     setXmlChildren(table_foot, reIndexElements(foot_rows), atFromAttr(foot[1]))
     table_insert(table_items, table_foot)
-    --
-    table_insert(table_items, '\n')
+    table_insert(table_items, NEWLINE)
     children = reIndexElements(table_items)
   elseif t == 'Figure' then
     at = atFromAttr(c[1])
@@ -645,7 +682,7 @@ blockToXml = function(block, state, index)
     children = blocksToXml(c[3], state) or {}
     table_insert(children, 1, caption)
     if #children > 0 then
-      table_insert(children, 1, '\n')
+      table_insert(children, 1, NEWLINE)
     end
     children = reIndexElements(children)
   elseif t == 'Div' then
@@ -688,9 +725,9 @@ end
 blocksToXml = function(blocks, state, start, separator)
   local elems = {} ---@type CtxXmlContent[]
   local index = start or 1
-  local sep = separator or "\n"
+  local sep = separator or NEWLINE
   if #blocks > 0 and sep then
-    table_insert(elems, "\n")
+    table_insert(elems, NEWLINE)
     index = index + 1
   end
   for i = 1, #blocks do
@@ -741,7 +778,7 @@ local function loadPandocJsonFileAsXml(filename, synctex)
     local api_version = pdoc["pandoc-api-version"] or DEFAULT_API_VERSION
     setXmlChildren(
       pandocElement,
-      reIndexElements({ '\n', meta, '\n', blocks, '\n' }),
+      reIndexElements({ NEWLINE, meta, NEWLINE, blocks, NEWLINE }),
       { [ATTR_API_VERSION] = table_concat(api_version, ",") }
     )
     -- exit main document
@@ -869,6 +906,5 @@ thirddata.pandocxml = {
   convertPandocJsonFile = convertPandocJsonFile,
   convertPandocJsonFileToXmlFile = convertPandocJsonFileToXmlFile,
 }
-
 
 -- save_xml_tables_for_comparison()
