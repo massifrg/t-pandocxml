@@ -169,7 +169,7 @@ memory by ConTeXt.
 Pandoc always converts input files into an internal format,
 before writing the document in the desired output format.
 
-That internal format stores the maximum of information that can
+That internal format carries the maximum of information that can
 pass through Pandoc, and it is storable as a file in two formats:
 
 - native: a textual format that represents a document in the way
