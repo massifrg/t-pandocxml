@@ -78,9 +78,9 @@ local TAG_TABLE_CELL = 'Cell'
 local ATTR_API_VERSION = 'api-version'
 -- local ATTR_TABLE_BODY_HEAD_ROWS = 'head-rows'
 local ATTR_TABLE_BODY_HEAD_COLS = 'row-head-columns' -- was "head-columns"
-local ATTR_TABLE_CELL_ALIGN = 'alignment' -- was "align"
-local ATTR_TABLE_CELL_COLSPAN = 'col-span' -- was "colspan"
-local ATTR_TABLE_CELL_ROWSPAN = 'row-span' -- was "rowspan"
+local ATTR_TABLE_CELL_ALIGN = 'alignment'            -- was "align"
+local ATTR_TABLE_CELL_COLSPAN = 'col-span'           -- was "colspan"
+local ATTR_TABLE_CELL_ROWSPAN = 'row-span'           -- was "rowspan"
 local TAG_CITATION = 'Citation'
 local TAG_CITATIONS = 'citations'
 local ATTR_CITATION_ID = 'id'
@@ -109,7 +109,17 @@ end
 ---@return PandocJsonParseState
 local function incrementLine(state)
   local lastIndex = #state.counters
-  state.counters[lastIndex] = state.counters[lastIndex] + 1
+  if not state.inMeta then
+    state.counters[lastIndex] = state.counters[lastIndex] + 1
+  end
+  return state
+end
+
+---Return a parser state with the `inMeta` field set to the value passed as 2nd argument.
+---@param state PandocJsonParseState
+---@return PandocJsonParseState
+local function setInMeta(state, in_meta)
+  state.inMeta = in_meta
   return state
 end
 
@@ -347,8 +357,8 @@ inlineToXml = function(inline, state, index)
       table_insert(citation_elements, NEWLINE)
     end
     children = inlinesToXml(c[2], state, 2)
-    if #citation_elements >0 then
-      local citations = createXmlElement(state, TAG_CITATIONS,1)
+    if #citation_elements > 0 then
+      local citations = createXmlElement(state, TAG_CITATIONS, 1)
       table_insert(citation_elements, 1, NEWLINE)
       setXmlChildren(citations, citation_elements)
       table_insert(children, 1, citations)
@@ -771,7 +781,8 @@ local function loadPandocJsonFileAsXml(filename, synctex)
     mt = getmetatable(root),
     synctex = synctex ~= false or environment.arguments.synctex,
     filenames = {},
-    counters = {}
+    counters = {},
+    inMeta = true -- meta is usually the first key to be parsed
   }
   -- enter main document
   state = enterSubDocument(state, filename)
@@ -781,9 +792,11 @@ local function loadPandocJsonFileAsXml(filename, synctex)
     -- Pandoc element
     local pandocElement = createXmlElement(state, TAG_PANDOC, 1)
     -- meta
+    state = setInMeta(state, true)
     local meta = createXmlElement(state, TAG_META, 1)
     setXmlChildren(meta, metaMapEntriesToXml(pdoc.meta, state) or {})
     -- blocks
+    state = setInMeta(state, false)
     local blocks = createXmlElement(state, TAG_BLOCKS, 2)
     setXmlChildren(blocks, blocksToXml(pdoc.blocks, state) or {})
     local api_version = pdoc["pandoc-api-version"] or DEFAULT_API_VERSION

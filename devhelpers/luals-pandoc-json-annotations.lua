@@ -3,6 +3,7 @@
 ---@field synctex boolean Populate cf and cl synctex fields in elements.
 ---@field filenames string[] Names of the JSON source files, for synctex.
 ---@field counters integer[] Line number (or equivalent) of the JSON source files, for synctex.
+---@field inMeta boolean It's true when parsing metadata ("meta" key in JSON file)
 
 ---@class PandocJsonItem
 ---@field t string Type of the item.
