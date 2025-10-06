@@ -129,7 +129,7 @@ end
 ---@return PandocJsonParseState
 local function enterSubDocument(state, filename)
   table_insert(state.filenames, filename)
-  table_insert(state.counters, 1)
+  table_insert(state.counters, 0)
   log('Entering subdocument "' .. filename .. '", depth ' .. #state.filenames)
   return state
 end
@@ -160,7 +160,8 @@ local function createXmlElement(state, tag, index)
   }
   if state.synctex then
     elem.cf = currentFilename(state)
-    elem.cl = currentLine(state)
+    local cl = currentLine(state)
+    elem.cl = cl > 0 and cl or 1
   end
   setmetatable(elem, state.mt)
   return elem
